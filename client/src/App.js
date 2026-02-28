@@ -64,20 +64,20 @@ function AppRoutes() {
 function App() {
     return (
         <LanguageProvider>
-        <ThemeProvider>
-            <AuthProvider>
-                <Router>
-                    <AppRoutes />
-                    <ToastContainer
-                        position="top-left"
-                        autoClose={3000}
-                        hideProgressBar={false}
-                        rtl={true}
-                        theme="colored"
-                    />
-                </Router>
-            </AuthProvider>
-        </ThemeProvider>
+            <ThemeProvider>
+                <AuthProvider>
+                    <Router>
+                        <AppRoutes />
+                        <ToastContainer
+                            position="top-left"
+                            autoClose={3000}
+                            hideProgressBar={false}
+                            rtl={true}
+                            theme="colored"
+                        />
+                    </Router>
+                </AuthProvider>
+            </ThemeProvider>
         </LanguageProvider>
     );
 }

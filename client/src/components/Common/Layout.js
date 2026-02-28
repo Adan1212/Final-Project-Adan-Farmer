@@ -33,7 +33,7 @@ const Layout = () => {
 
             <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
                 <div className="sidebar-header">
-                <div className="sidebar-brand">
+                    <div className="sidebar-brand">
                         <span className="brand-icon">🚜</span>
                         <div className="brand-text">
                             <h2>{t('appName')}</h2>

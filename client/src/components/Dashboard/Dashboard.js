@@ -320,9 +320,9 @@ const Dashboard = () => {
                                                 <td>{op.fieldId?.name || '-'}</td>
                                                 <td>
                                                     <span className={`badge ${op.operationType === 'planting' ? 'badge-green' :
-                                                            op.operationType === 'harvesting' ? 'badge-orange' :
-                                                                op.operationType === 'fertilizing' ? 'badge-purple' :
-                                                                    op.operationType === 'spraying' ? 'badge-red' : 'badge-blue'
+                                                        op.operationType === 'harvesting' ? 'badge-orange' :
+                                                            op.operationType === 'fertilizing' ? 'badge-purple' :
+                                                                op.operationType === 'spraying' ? 'badge-red' : 'badge-blue'
                                                         }`}>
                                                         {opTypeLabels[op.operationType] || op.operationType}
                                                     </span>
