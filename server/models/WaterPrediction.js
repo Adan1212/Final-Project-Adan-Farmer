@@ -31,6 +31,10 @@ const waterPredictionSchema = new mongoose.Schema({
         type: Number, // 0-100
         default: 0
     },
+    potentialSaving: {
+        type: Number, // NIS
+        default: 0
+    },
     weatherDataId: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'WeatherData'

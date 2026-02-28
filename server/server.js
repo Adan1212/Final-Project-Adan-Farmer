@@ -140,9 +140,12 @@ async function seedDemoData() {
         for (const algo of algorithms) {
             const base = field.size * 3.5;
             const mult = algo === 'linear_regression' ? 0.85 : algo === 'random_forest' ? 1.05 : algo === 'gradient_boosting' ? 1.0 : algo === 'fao56' ? 1.1 : 1.0;
+            const predicted = +(base * mult).toFixed(2);
+            const saving = +(predicted * (0.1 + Math.random() * 0.15) * 5).toFixed(0); // 10-25% savings * ₪5/m³
             predData.push({
                 user: user._id, fieldId: field._id, date: new Date(),
-                predictedConsumption: +(base * mult).toFixed(2), algorithm: algo, confidence: confidences[algo],
+                predictedConsumption: predicted, algorithm: algo, confidence: confidences[algo],
+                potentialSaving: saving,
                 features: { temperature: 22, humidity: 55, windSpeed: 3, rainfall: 0, cropType: 'חיטה', growthStage: 'vegetative', soilType: field.soilType, et0: 3.29 }
             });
         }

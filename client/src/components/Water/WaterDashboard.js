@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { waterAPI, predictionsAPI, anomaliesAPI } from '../../services/api';
-import { FiDroplet, FiAlertTriangle, FiTrendingUp, FiDollarSign, FiArrowLeft, FiActivity, FiZap } from 'react-icons/fi';
+import { useLanguage } from '../../context/LanguageContext';
+import { FiDroplet, FiAlertTriangle, FiTrendingUp, FiDollarSign, FiArrowLeft, FiArrowRight, FiActivity, FiZap } from 'react-icons/fi';
 import { Line, Doughnut, Bar } from 'react-chartjs-2';
 import {
     Chart as ChartJS, CategoryScale, LinearScale, PointElement,
@@ -14,6 +15,7 @@ const WaterDashboard = () => {
     const [predictions, setPredictions] = useState([]);
     const [anomalies, setAnomalies] = useState([]);
     const [loading, setLoading] = useState(true);
+    const { t, language, isRTL } = useLanguage();
 
     useEffect(() => {
         Promise.all([
@@ -39,9 +41,9 @@ const WaterDashboard = () => {
     // Water trend chart
     const last30 = readings.slice(-30);
     const trendData = {
-        labels: last30.map(r => new Date(r.date || r.createdAt).toLocaleDateString('he-IL')),
+        labels: last30.map(r => new Date(r.date || r.createdAt).toLocaleDateString(language === 'he' ? 'he-IL' : 'en-US')),
         datasets: [{
-            label: 'צריכת מים (מ״ק)',
+            label: t('waterConsumption'),
             data: last30.map(r => r.actualConsumption),
             borderColor: '#3b82f6',
             backgroundColor: (ctx) => {
@@ -65,7 +67,7 @@ const WaterDashboard = () => {
         acc[type] = (acc[type] || 0) + 1;
         return acc;
     }, {});
-    const typeLabels = { overconsumption: 'צריכה גבוהה', underconsumption: 'צריכה נמוכה', high_consumption: 'צריכה גבוהה', leak_suspected: 'חשד לדליפה', sensor_error: 'שגיאת חיישן' };
+    const typeLabels = { overconsumption: t('highConsumption'), underconsumption: t('lowConsumption'), high_consumption: t('highConsumption'), leak_suspected: t('leakSuspected'), sensor_error: t('sensorError') };
     const anomalyData = {
         labels: Object.keys(anomalyTypes).map(t => typeLabels[t] || t),
         datasets: [{
@@ -77,7 +79,7 @@ const WaterDashboard = () => {
     };
 
     // Weekly consumption bar chart
-    const weekDays = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
+    const weekDays = [t('sunday'), t('monday'), t('tuesday'), t('wednesday'), t('thursday'), t('friday'), t('saturday')];
     const weeklyData = weekDays.map((_, i) => {
         const dayReadings = readings.filter(r => new Date(r.date || r.createdAt).getDay() === i);
         return dayReadings.length > 0 ? dayReadings.reduce((s, r) => s + (r.actualConsumption || 0), 0) / dayReadings.length : 0;
@@ -85,7 +87,7 @@ const WaterDashboard = () => {
     const weeklyChartData = {
         labels: weekDays,
         datasets: [{
-            label: 'ממוצע צריכה יומית',
+            label: t('avgDailyConsumption'),
             data: weeklyData,
             backgroundColor: weeklyData.map(v => v > (totalConsumption / Math.max(readings.length, 1)) * 1.2 ? 'rgba(239,68,68,0.7)' : 'rgba(59,130,246,0.7)'),
             borderRadius: 8,
@@ -103,18 +105,20 @@ const WaterDashboard = () => {
         ? predictions.reduce((best, p) => (p.confidence || 0) > (best.confidence || 0) ? p : best, predictions[0])
         : null;
 
+    const ArrowIcon = isRTL ? FiArrowLeft : FiArrowRight;
+
     return (
         <div className="fade-in">
             {/* Hero Header */}
             <div className="water-hero">
                 <div className="water-hero-content">
                     <div className="water-hero-text">
-                        <h1>💧 ניהול מים חכם</h1>
-                        <p>מערכת AI מתקדמת לאופטימיזציה של צריכת המים בחווה</p>
+                        <h1>💧 {t('smartWaterMgmt')}</h1>
+                        <p>{t('aiWaterSystem')}</p>
                     </div>
                     <div className="water-hero-badge">
                         <FiZap />
-                        <span>AI מופעל</span>
+                        <span>{t('aiEnabled')}</span>
                     </div>
                 </div>
             </div>
@@ -125,41 +129,41 @@ const WaterDashboard = () => {
                     <div className="water-stat-icon"><FiDroplet /></div>
                     <div className="water-stat-info">
                         <div className="water-stat-number">{totalConsumption.toLocaleString()}</div>
-                        <div className="water-stat-label">סה״כ צריכה (מ״ק)</div>
+                        <div className="water-stat-label">{t('totalConsumption')}</div>
                     </div>
                     <div className="water-stat-mini">
-                        <span>מינימום: {minConsumption.toFixed(1)}</span>
-                        <span>מקסימום: {maxConsumption.toFixed(1)}</span>
+                        <span>{t('minimum')}: {minConsumption.toFixed(1)}</span>
+                        <span>{t('maximum')}: {maxConsumption.toFixed(1)}</span>
                     </div>
                 </div>
                 <div className="water-stat-card water-stat-green">
                     <div className="water-stat-icon"><FiTrendingUp /></div>
                     <div className="water-stat-info">
                         <div className="water-stat-number">{avgConsumption}</div>
-                        <div className="water-stat-label">ממוצע לקריאה</div>
+                        <div className="water-stat-label">{t('avgPerReading')}</div>
                     </div>
                     <div className="water-stat-mini">
-                        <span>{readings.length} קריאות</span>
+                        <span>{readings.length} {t('readings')}</span>
                     </div>
                 </div>
                 <div className="water-stat-card water-stat-red">
                     <div className="water-stat-icon"><FiAlertTriangle /></div>
                     <div className="water-stat-info">
                         <div className="water-stat-number">{unresolvedAnomalies}</div>
-                        <div className="water-stat-label">חריגות פתוחות</div>
+                        <div className="water-stat-label">{t('openAnomaliesCount')}</div>
                     </div>
                     <div className="water-stat-mini">
-                        <span>מתוך {anomalies.length} סה״כ</span>
+                        <span>{t('outOf')} {anomalies.length} {t('total')}</span>
                     </div>
                 </div>
                 <div className="water-stat-card water-stat-emerald">
                     <div className="water-stat-icon"><FiDollarSign /></div>
                     <div className="water-stat-info">
                         <div className="water-stat-number">₪{estimatedSavings.toLocaleString()}</div>
-                        <div className="water-stat-label">חיסכון צפוי</div>
+                        <div className="water-stat-label">{t('expectedSavings')}</div>
                     </div>
                     <div className="water-stat-mini">
-                        <span>בעזרת תחזיות AI</span>
+                        <span>{t('withAIPredictions')}</span>
                     </div>
                 </div>
             </div>
@@ -169,11 +173,11 @@ const WaterDashboard = () => {
                 <div className="water-chart-card water-chart-main">
                     <div className="water-chart-header">
                         <div>
-                            <h3>📈 מגמת צריכת מים</h3>
-                            <p>30 הקריאות האחרונות</p>
+                            <h3>📈 {t('waterTrend')}</h3>
+                            <p>{t('last30Readings')}</p>
                         </div>
                         <Link to="/water/readings" className="btn btn-sm btn-secondary">
-                            כל הקריאות <FiArrowLeft />
+                            {t('allReadings')} <ArrowIcon />
                         </Link>
                     </div>
                     <div className="chart-container">
@@ -183,14 +187,14 @@ const WaterDashboard = () => {
                                 plugins: { legend: { display: false }, tooltip: { backgroundColor: 'rgba(0,0,0,0.8)', padding: 12, cornerRadius: 8, titleFont: { family: 'Rubik' }, bodyFont: { family: 'Rubik' } } },
                                 scales: { y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' } }, x: { grid: { display: false } } }
                             }} />
-                        ) : <div className="empty-state"><p>אין נתונים להצגה</p></div>}
+                        ) : <div className="empty-state"><p>{t('noData')}</p></div>}
                     </div>
                 </div>
                 <div className="water-chart-card">
                     <div className="water-chart-header">
                         <div>
-                            <h3>🔍 התפלגות חריגות</h3>
-                            <p>{anomalies.length} חריגות זוהו</p>
+                            <h3>🔍 {t('anomalyDistribution')}</h3>
+                            <p>{anomalies.length} {t('anomaliesDetected')}</p>
                         </div>
                     </div>
                     <div className="chart-container" style={{ height: '250px' }}>
@@ -200,7 +204,7 @@ const WaterDashboard = () => {
                                 cutout: '65%',
                                 plugins: { legend: { position: 'bottom', rtl: true, labels: { padding: 16, usePointStyle: true, pointStyle: 'circle', font: { family: 'Rubik', size: 12 } } } }
                             }} />
-                        ) : <div className="empty-state"><p>אין חריגות</p></div>}
+                        ) : <div className="empty-state"><p>{t('noAnomalies')}</p></div>}
                     </div>
                 </div>
             </div>
@@ -210,8 +214,8 @@ const WaterDashboard = () => {
                 <div className="water-chart-card">
                     <div className="water-chart-header">
                         <div>
-                            <h3>📊 דפוס צריכה שבועי</h3>
-                            <p>ממוצע צריכה לפי ימים</p>
+                            <h3>📊 {t('weeklyPattern')}</h3>
+                            <p>{t('avgByDay')}</p>
                         </div>
                     </div>
                     <div className="chart-container" style={{ height: '250px' }}>
@@ -225,8 +229,8 @@ const WaterDashboard = () => {
                 <div className="water-chart-card water-ai-insight">
                     <div className="water-chart-header">
                         <div>
-                            <h3><FiActivity /> תובנות AI</h3>
-                            <p>ניתוח אוטומטי</p>
+                            <h3><FiActivity /> {t('aiInsights')}</h3>
+                            <p>{t('autoAnalysis')}</p>
                         </div>
                     </div>
                     <div className="ai-insights-list">
@@ -234,32 +238,32 @@ const WaterDashboard = () => {
                             <div className="ai-insight-item">
                                 <div className="ai-insight-icon" style={{ background: 'rgba(139,92,246,0.1)', color: '#8b5cf6' }}>🤖</div>
                                 <div>
-                                    <strong>אלגוריתם מוביל: {bestPrediction.algorithm}</strong>
-                                    <p>רמת ביטחון: {bestPrediction.confidence?.toFixed(0)}%</p>
+                                    <strong>{t('leadingAlgo')}: {bestPrediction.algorithm}</strong>
+                                    <p>{t('confidenceLevel')}: {bestPrediction.confidence?.toFixed(0)}%</p>
                                 </div>
                             </div>
                         )}
                         <div className="ai-insight-item">
                             <div className="ai-insight-icon" style={{ background: 'rgba(59,130,246,0.1)', color: '#3b82f6' }}>💧</div>
                             <div>
-                                <strong>ממוצע צריכה: {avgConsumption} מ״ק</strong>
-                                <p>{readings.length} קריאות מנותחות</p>
+                                <strong>{t('avgConsumption')}: {avgConsumption} {t('cubicMeters')}</strong>
+                                <p>{readings.length} {t('analyzedReadings')}</p>
                             </div>
                         </div>
                         {unresolvedAnomalies > 0 && (
                             <div className="ai-insight-item">
                                 <div className="ai-insight-icon" style={{ background: 'rgba(239,68,68,0.1)', color: '#ef4444' }}>⚠️</div>
                                 <div>
-                                    <strong>{unresolvedAnomalies} חריגות דורשות טיפול</strong>
-                                    <p>יש לבדוק ולטפל בחריגות</p>
+                                    <strong>{unresolvedAnomalies} {t('anomaliesNeedAttention')}</strong>
+                                    <p>{t('checkAnomalies')}</p>
                                 </div>
                             </div>
                         )}
                         <div className="ai-insight-item">
                             <div className="ai-insight-icon" style={{ background: 'rgba(16,185,129,0.1)', color: '#10b981' }}>💰</div>
                             <div>
-                                <strong>חיסכון פוטנציאלי: ₪{estimatedSavings.toLocaleString()}</strong>
-                                <p>על בסיס תחזיות AI</p>
+                                <strong>{t('potentialSavings')}: ₪{estimatedSavings.toLocaleString()}</strong>
+                                <p>{t('basedOnAI')}</p>
                             </div>
                         </div>
                     </div>
@@ -271,28 +275,28 @@ const WaterDashboard = () => {
                 <Link to="/water/readings" className="water-quick-card">
                     <div className="water-quick-icon" style={{ background: 'linear-gradient(135deg, #3b82f6, #60a5fa)' }}>💧</div>
                     <div className="water-quick-info">
-                        <h3>קריאות מים</h3>
-                        <p>נהל קריאות מונים</p>
+                        <h3>{t('waterReadings')}</h3>
+                        <p>{t('manageReadings')}</p>
                     </div>
-                    <FiArrowLeft className="water-quick-arrow" />
+                    <ArrowIcon className="water-quick-arrow" />
                 </Link>
                 <Link to="/water/predictions" className="water-quick-card">
                     <div className="water-quick-icon" style={{ background: 'linear-gradient(135deg, #8b5cf6, #a78bfa)' }}>🤖</div>
                     <div className="water-quick-info">
-                        <h3>תחזיות AI</h3>
-                        <p>3 אלגוריתמים חכמים</p>
+                        <h3>{t('aiPredictions')}</h3>
+                        <p>{t('smartAlgorithms')}</p>
                     </div>
-                    <FiArrowLeft className="water-quick-arrow" />
+                    <ArrowIcon className="water-quick-arrow" />
                 </Link>
                 <Link to="/water/anomalies" className="water-quick-card">
                     <div className="water-quick-icon" style={{ background: unresolvedAnomalies > 0 ? 'linear-gradient(135deg, #ef4444, #f87171)' : 'linear-gradient(135deg, #10b981, #34d399)' }}>
                         {unresolvedAnomalies > 0 ? '⚠️' : '✅'}
                     </div>
                     <div className="water-quick-info">
-                        <h3>חריגות</h3>
-                        <p>{unresolvedAnomalies > 0 ? `${unresolvedAnomalies} חריגות פתוחות` : 'הכל תקין!'}</p>
+                        <h3>{t('anomalies')}</h3>
+                        <p>{unresolvedAnomalies > 0 ? `${unresolvedAnomalies} ${t('openAnomaliesText')}` : t('allOk')}</p>
                     </div>
-                    <FiArrowLeft className="water-quick-arrow" />
+                    <ArrowIcon className="water-quick-arrow" />
                 </Link>
             </div>
 
@@ -301,11 +305,11 @@ const WaterDashboard = () => {
                 <div className="water-predictions-section">
                     <div className="water-chart-header" style={{ marginBottom: '16px' }}>
                         <div>
-                            <h3>🔮 תחזיות אחרונות</h3>
-                            <p>תחזיות AI לצריכת מים</p>
+                            <h3>🔮 {t('latestPredictions')}</h3>
+                            <p>{t('aiWaterPredictions')}</p>
                         </div>
                         <Link to="/water/predictions" className="btn btn-sm btn-secondary">
-                            כל התחזיות <FiArrowLeft />
+                            {t('allPredictions')} <ArrowIcon />
                         </Link>
                     </div>
                     <div className="water-predictions-grid">
@@ -313,15 +317,15 @@ const WaterDashboard = () => {
                             <div key={p._id} className="water-prediction-card">
                                 <div className="water-prediction-algo">
                                     <span className="badge badge-purple">{p.algorithm || 'AI'}</span>
-                                    <span className="water-prediction-date">{new Date(p.predictionDate || p.createdAt).toLocaleDateString('he-IL')}</span>
+                                    <span className="water-prediction-date">{new Date(p.predictionDate || p.createdAt).toLocaleDateString(language === 'he' ? 'he-IL' : 'en-US')}</span>
                                 </div>
-                                <div className="water-prediction-value">{p.predictedConsumption?.toFixed(1)}<span>מ״ק</span></div>
+                                <div className="water-prediction-value">{p.predictedConsumption?.toFixed(1)}<span>{t('cubicMeters')}</span></div>
                                 {p.confidence && (
                                     <div className="water-prediction-confidence">
                                         <div className="confidence-bar">
                                             <div className="confidence-bar-fill" style={{ width: `${p.confidence}%`, background: p.confidence > 80 ? '#10b981' : p.confidence > 60 ? '#f59e0b' : '#ef4444' }}></div>
                                         </div>
-                                        <span>{p.confidence.toFixed(0)}% ביטחון</span>
+                                        <span>{p.confidence.toFixed(0)}% {t('confidence')}</span>
                                     </div>
                                 )}
                             </div>

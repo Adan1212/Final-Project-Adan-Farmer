@@ -2,38 +2,25 @@ import React, { useState } from 'react';
 import { Outlet, NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../context/ThemeContext';
+import { useLanguage } from '../../context/LanguageContext';
 import {
     FiHome, FiMap, FiLayers, FiSettings, FiLogOut,
     FiSun, FiMoon, FiMenu, FiX, FiDroplet, FiActivity,
     FiClipboard, FiHeart, FiCalendar, FiAlertTriangle,
-    FiTrendingUp, FiBarChart2
+    FiTrendingUp, FiBarChart2, FiGlobe
 } from 'react-icons/fi';
 import { GiSheep, GiWheat, GiWaterDrop } from 'react-icons/gi';
 
 const Layout = () => {
     const { user, logout } = useAuth();
     const { darkMode, toggleTheme } = useTheme();
+    const { language, toggleLanguage, t } = useLanguage();
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const location = useLocation();
 
     const getPageTitle = () => {
         const path = location.pathname;
-        const titles = {
-            '/': 'לוח בקרה',
-            '/fields': 'ניהול שדות',
-            '/fields/new': 'שדה חדש',
-            '/crops': 'ניהול גידולים',
-            '/crops/new': 'גידול חדש',
-            '/operations': 'פעולות חקלאיות',
-            '/sheep': 'ניהול עדר',
-            '/vaccinations': 'חיסונים',
-            '/treatments': 'טיפולים רפואיים',
-            '/births': 'לידות',
-            '/water': 'ניהול מים חכם',
-            '/water/readings': 'קריאות מים',
-            '/water/predictions': 'תחזיות AI',
-            '/water/anomalies': 'חריגות',
-        };
+        const titles = t('pageTitles') || {};
         for (const [key, val] of Object.entries(titles)) {
             if (path === key || path.startsWith(key + '/')) return val;
         }
@@ -46,77 +33,77 @@ const Layout = () => {
 
             <aside className={`sidebar ${sidebarOpen ? 'open' : ''}`}>
                 <div className="sidebar-header">
-                    <div className="sidebar-brand">
+                <div className="sidebar-brand">
                         <span className="brand-icon">🚜</span>
                         <div className="brand-text">
-                            <h2>Farm Manager</h2>
-                            <p>{user?.farmName || 'ניהול חווה חכם'}</p>
+                            <h2>{t('appName')}</h2>
+                            <p>{user?.farmName || t('smartFarm')}</p>
                         </div>
                     </div>
                 </div>
 
                 <nav className="sidebar-nav">
                     <div className="nav-section">
-                        <div className="nav-section-title">ראשי</div>
+                        <div className="nav-section-title">{t('main')}</div>
                         <NavLink to="/" end className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`} onClick={() => setSidebarOpen(false)}>
                             <FiHome className="nav-icon" />
-                            <span>לוח בקרה</span>
+                            <span>{t('dashboard')}</span>
                         </NavLink>
                     </div>
 
                     <div className="nav-section">
-                        <div className="nav-section-title">שדות וגידולים</div>
+                        <div className="nav-section-title">{t('fieldsAndCrops')}</div>
                         <NavLink to="/fields" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`} onClick={() => setSidebarOpen(false)}>
                             <FiMap className="nav-icon" />
-                            <span>שדות</span>
+                            <span>{t('fields')}</span>
                         </NavLink>
                         <NavLink to="/crops" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`} onClick={() => setSidebarOpen(false)}>
                             <FiLayers className="nav-icon" />
-                            <span>גידולים</span>
+                            <span>{t('crops')}</span>
                         </NavLink>
                         <NavLink to="/operations" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`} onClick={() => setSidebarOpen(false)}>
                             <FiClipboard className="nav-icon" />
-                            <span>פעולות חקלאיות</span>
+                            <span>{t('agriculturalOps')}</span>
                         </NavLink>
                     </div>
 
                     <div className="nav-section">
-                        <div className="nav-section-title">עדר כבשים</div>
+                        <div className="nav-section-title">{t('sheepFlock')}</div>
                         <NavLink to="/sheep" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`} onClick={() => setSidebarOpen(false)}>
                             <FiActivity className="nav-icon" />
-                            <span>כבשים</span>
+                            <span>{t('sheep')}</span>
                         </NavLink>
                         <NavLink to="/vaccinations" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`} onClick={() => setSidebarOpen(false)}>
                             <FiHeart className="nav-icon" />
-                            <span>חיסונים</span>
+                            <span>{t('vaccinations')}</span>
                         </NavLink>
                         <NavLink to="/treatments" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`} onClick={() => setSidebarOpen(false)}>
                             <FiSettings className="nav-icon" />
-                            <span>טיפולים רפואיים</span>
+                            <span>{t('medicalTreatments')}</span>
                         </NavLink>
                         <NavLink to="/births" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`} onClick={() => setSidebarOpen(false)}>
                             <FiCalendar className="nav-icon" />
-                            <span>לידות</span>
+                            <span>{t('births')}</span>
                         </NavLink>
                     </div>
 
                     <div className="nav-section">
-                        <div className="nav-section-title">ניהול מים - AI</div>
+                        <div className="nav-section-title">{t('waterAI')}</div>
                         <NavLink to="/water" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`} onClick={() => setSidebarOpen(false)}>
                             <FiDroplet className="nav-icon" />
-                            <span>סקירת מים</span>
+                            <span>{t('waterOverview')}</span>
                         </NavLink>
                         <NavLink to="/water/readings" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`} onClick={() => setSidebarOpen(false)}>
                             <FiBarChart2 className="nav-icon" />
-                            <span>קריאות מים</span>
+                            <span>{t('waterReadings')}</span>
                         </NavLink>
                         <NavLink to="/water/predictions" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`} onClick={() => setSidebarOpen(false)}>
                             <FiTrendingUp className="nav-icon" />
-                            <span>תחזיות AI</span>
+                            <span>{t('aiPredictions')}</span>
                         </NavLink>
                         <NavLink to="/water/anomalies" className={({ isActive }) => `nav-link ${isActive ? 'active' : ''}`} onClick={() => setSidebarOpen(false)}>
                             <FiAlertTriangle className="nav-icon" />
-                            <span>חריגות</span>
+                            <span>{t('anomalies')}</span>
                         </NavLink>
                     </div>
                 </nav>
@@ -127,13 +114,13 @@ const Layout = () => {
                             {user?.name?.charAt(0)?.toUpperCase() || 'U'}
                         </div>
                         <div className="user-details">
-                            <h4>{user?.name || 'משתמש'}</h4>
-                            <p>{user?.role === 'admin' ? 'מנהל' : user?.role === 'manager' ? 'מנהל חווה' : 'עובד'}</p>
+                            <h4>{user?.name || t('user')}</h4>
+                            <p>{user?.role === 'admin' ? t('admin') : user?.role === 'manager' ? t('farmManager') : t('employee')}</p>
                         </div>
                     </div>
                     <button className="logout-btn" onClick={logout}>
                         <FiLogOut />
-                        <span>התנתקות</span>
+                        <span>{t('logout')}</span>
                     </button>
                 </div>
             </aside>
@@ -145,7 +132,16 @@ const Layout = () => {
                     </button>
                     <h1 className="page-title">{getPageTitle()}</h1>
                     <div className="top-bar-right">
-                        <button className="theme-toggle" onClick={toggleTheme} title={darkMode ? 'מצב בהיר' : 'מצב כהה'}>
+                        <button
+                            className="theme-toggle lang-toggle"
+                            onClick={toggleLanguage}
+                            title={language === 'he' ? 'Switch to English' : 'עבור לעברית'}
+                            style={{ marginRight: '8px', display: 'flex', alignItems: 'center', gap: '4px' }}
+                        >
+                            <FiGlobe />
+                            <span style={{ fontSize: '12px', fontWeight: 600 }}>{language === 'he' ? 'EN' : 'HE'}</span>
+                        </button>
+                        <button className="theme-toggle" onClick={toggleTheme} title={darkMode ? t('lightMode') : t('darkMode')}>
                             {darkMode ? <FiSun /> : <FiMoon />}
                         </button>
                     </div>

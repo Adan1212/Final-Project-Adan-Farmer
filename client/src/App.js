@@ -6,6 +6,7 @@ import './App.css';
 
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
+import { LanguageProvider } from './context/LanguageContext';
 
 import Layout from './components/Common/Layout';
 import Login from './components/Auth/Login';
@@ -62,6 +63,7 @@ function AppRoutes() {
 
 function App() {
     return (
+        <LanguageProvider>
         <ThemeProvider>
             <AuthProvider>
                 <Router>
@@ -76,6 +78,7 @@ function App() {
                 </Router>
             </AuthProvider>
         </ThemeProvider>
+        </LanguageProvider>
     );
 }
 

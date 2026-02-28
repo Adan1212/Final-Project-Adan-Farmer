@@ -117,6 +117,7 @@ export const waterAPI = {
 export const weatherAPI = {
     getAll: (params) => api.get('/weather', { params }),
     create: (data) => api.post('/weather', data),
+    getRealtime: (params) => api.get('/weather/realtime', { params }),
 };
 
 // Predictions

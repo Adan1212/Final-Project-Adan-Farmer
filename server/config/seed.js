@@ -168,6 +168,27 @@ const seedDB = async () => {
         await Anomaly.create(anomalyData);
         console.log(`Created ${anomalyData.length} anomalies`);
 
+        // Create water predictions with potentialSaving
+        const algorithms = ['linear_regression', 'random_forest', 'gradient_boosting', 'fao56', 'ensemble'];
+        const confidences = { linear_regression: 72, random_forest: 82, gradient_boosting: 85, fao56: 78, ensemble: 87 };
+        const predData = [];
+        for (const field of fields) {
+            for (const algo of algorithms) {
+                const base = field.size * 3.5;
+                const mult = algo === 'linear_regression' ? 0.85 : algo === 'random_forest' ? 1.05 : algo === 'gradient_boosting' ? 1.0 : algo === 'fao56' ? 1.1 : 1.0;
+                const predicted = +(base * mult).toFixed(2);
+                const saving = +(predicted * (0.1 + Math.random() * 0.15) * 5).toFixed(0);
+                predData.push({
+                    user: user._id, fieldId: field._id, date: new Date(),
+                    predictedConsumption: predicted, algorithm: algo, confidence: confidences[algo],
+                    potentialSaving: saving,
+                    features: { temperature: 22, humidity: 55, windSpeed: 3, rainfall: 0, cropType: 'חיטה', growthStage: 'vegetative', soilType: field.soilType, et0: 3.29 }
+                });
+            }
+        }
+        await WaterPrediction.create(predData);
+        console.log(`Created ${predData.length} water predictions`);
+
         console.log('\n✅ Database seeded successfully!');
         console.log('Login: adan@farm.com / 123456\n');
         process.exit(0);

@@ -5,6 +5,7 @@ const IrrigationRecommendation = require('../models/IrrigationRecommendation');
 const Anomaly = require('../models/Anomaly');
 const Field = require('../models/Field');
 const Crop = require('../models/Crop');
+const axios = require('axios');
 
 // ==================== WATER READINGS ====================
 
@@ -149,6 +150,118 @@ exports.createWeatherData = async (req, res) => {
     }
 };
 
+// @desc    Get realtime weather from OpenWeatherMap
+// @route   GET /api/weather/realtime
+exports.getRealtimeWeather = async (req, res) => {
+    try {
+        const apiKey = process.env.OPENWEATHER_API_KEY;
+        // Default coordinates: Be'er Sheva, Israel (Negev - farming region)
+        const lat = req.query.lat || 31.25;
+        const lon = req.query.lon || 34.79;
+
+        if (!apiKey || apiKey === 'your_openweather_api_key_here') {
+            // Fallback: return latest weather from DB if no API key
+            const latest = await WeatherData.findOne().sort('-date');
+            if (latest) {
+                return res.status(200).json({
+                    success: true,
+                    source: 'database',
+                    data: {
+                        temperature: latest.temperature,
+                        temperatureMin: latest.temperatureMin,
+                        temperatureMax: latest.temperatureMax,
+                        humidity: latest.humidity,
+                        windSpeed: latest.windSpeed,
+                        rainfall: latest.rainfall || 0,
+                        description: 'From database (set OPENWEATHER_API_KEY for live data)',
+                        icon: '01d',
+                        city: 'Local',
+                        date: latest.date
+                    }
+                });
+            }
+            return res.status(200).json({
+                success: true,
+                source: 'default',
+                data: {
+                    temperature: 22,
+                    temperatureMin: 15,
+                    temperatureMax: 28,
+                    humidity: 50,
+                    windSpeed: 3,
+                    rainfall: 0,
+                    description: 'No API key configured',
+                    icon: '01d',
+                    city: 'Default',
+                    date: new Date()
+                }
+            });
+        }
+
+        const url = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${apiKey}&units=metric`;
+        const response = await axios.get(url);
+        const d = response.data;
+
+        const weatherData = {
+            temperature: d.main.temp,
+            temperatureMin: d.main.temp_min,
+            temperatureMax: d.main.temp_max,
+            humidity: d.main.humidity,
+            windSpeed: d.wind?.speed || 0,
+            pressure: d.main.pressure,
+            rainfall: d.rain?.['1h'] || d.rain?.['3h'] || 0,
+            cloudCover: d.clouds?.all || 0,
+            description: d.weather?.[0]?.description || '',
+            icon: d.weather?.[0]?.icon || '01d',
+            city: d.name,
+            country: d.sys?.country,
+            feelsLike: d.main.feels_like,
+            date: new Date()
+        };
+
+        // Also save to DB for historical tracking
+        await WeatherData.create({
+            user: req.user.id,
+            date: new Date(),
+            temperature: weatherData.temperature,
+            temperatureMin: weatherData.temperatureMin,
+            temperatureMax: weatherData.temperatureMax,
+            humidity: weatherData.humidity,
+            windSpeed: weatherData.windSpeed,
+            rainfall: weatherData.rainfall,
+            pressure: weatherData.pressure,
+            cloudCover: weatherData.cloudCover,
+            source: 'api'
+        });
+
+        res.status(200).json({ success: true, source: 'openweathermap', data: weatherData });
+    } catch (err) {
+        // If API fails, fallback to DB
+        try {
+            const latest = await WeatherData.findOne().sort('-date');
+            if (latest) {
+                return res.status(200).json({
+                    success: true,
+                    source: 'database_fallback',
+                    data: {
+                        temperature: latest.temperature,
+                        temperatureMin: latest.temperatureMin,
+                        temperatureMax: latest.temperatureMax,
+                        humidity: latest.humidity,
+                        windSpeed: latest.windSpeed,
+                        rainfall: latest.rainfall || 0,
+                        description: 'From database (API unavailable)',
+                        icon: '01d',
+                        city: 'Local',
+                        date: latest.date
+                    }
+                });
+            }
+        } catch (dbErr) { /* ignore */ }
+        res.status(500).json({ success: false, message: 'Weather fetch failed', error: err.message });
+    }
+};
+
 // ==================== PREDICTIONS ====================
 
 // @desc    Get predictions
@@ -219,6 +332,7 @@ exports.generatePrediction = async (req, res) => {
         for (const algo of algorithms) {
             const multiplier = getAlgorithmMultiplier(algo, latestWeather, crop);
             const predicted = predictedConsumption * multiplier;
+            const saving = parseFloat((predicted * (0.1 + Math.random() * 0.15) * 5).toFixed(0)); // 10-25% * ₪5/m³
 
             const prediction = await WaterPrediction.create({
                 user: req.user.id,
@@ -227,6 +341,7 @@ exports.generatePrediction = async (req, res) => {
                 predictedConsumption: parseFloat(predicted.toFixed(2)),
                 algorithm: algo,
                 confidence: getConfidence(algo),
+                potentialSaving: saving,
                 weatherDataId: latestWeather?._id,
                 features: {
                     temperature: latestWeather?.temperature || 25,
@@ -244,6 +359,7 @@ exports.generatePrediction = async (req, res) => {
 
         // Create ensemble prediction (average)
         const ensemblePredicted = predictions.reduce((sum, p) => sum + p.predictedConsumption, 0) / predictions.length;
+        const ensembleSaving = Math.round(predictions.reduce((sum, p) => sum + (p.potentialSaving || 0), 0) / predictions.length);
         const ensemble = await WaterPrediction.create({
             user: req.user.id,
             fieldId,
@@ -251,6 +367,7 @@ exports.generatePrediction = async (req, res) => {
             predictedConsumption: parseFloat(ensemblePredicted.toFixed(2)),
             algorithm: 'ensemble',
             confidence: 85,
+            potentialSaving: ensembleSaving,
             weatherDataId: latestWeather?._id,
             features: predictions[0].features
         });

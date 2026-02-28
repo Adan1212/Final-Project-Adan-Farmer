@@ -6,6 +6,7 @@ const { protect } = require('../middleware/auth');
 router.use(protect);
 
 router.get('/', water.getWeatherData);
+router.get('/realtime', water.getRealtimeWeather);
 router.post('/', water.createWeatherData);
 
 module.exports = router;
