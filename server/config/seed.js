@@ -1,10 +1,12 @@
 const mongoose = require('mongoose');
-require('dotenv').config();
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 
 const User = require('../models/User');
 const Field = require('../models/Field');
 const Crop = require('../models/Crop');
 const Sheep = require('../models/Sheep');
+const Birth = require('../models/Birth');
 const WaterReading = require('../models/WaterReading');
 const WeatherData = require('../models/WeatherData');
 const WaterPrediction = require('../models/WaterPrediction');
@@ -12,6 +14,7 @@ const IrrigationRecommendation = require('../models/IrrigationRecommendation');
 const Anomaly = require('../models/Anomaly');
 const Vaccination = require('../models/Vaccination');
 const AgriculturalOperation = require('../models/AgriculturalOperation');
+const MedicalTreatment = require('../models/MedicalTreatment');
 
 const connectDB = require('./db');
 
@@ -25,6 +28,8 @@ const seedDB = async () => {
             Field.deleteMany({}),
             Crop.deleteMany({}),
             Sheep.deleteMany({}),
+            Birth.deleteMany({}),
+            MedicalTreatment.deleteMany({}),
             WaterReading.deleteMany({}),
             WeatherData.deleteMany({}),
             WaterPrediction.deleteMany({}),
@@ -88,16 +93,46 @@ const seedDB = async () => {
         const sheep = await Sheep.create(sheepData);
         console.log(`Created ${sheep.length} sheep`);
 
+        // Create births
+        const females = sheep.filter(s => s.gender === 'female');
+        const males = sheep.filter(s => s.gender === 'male');
+        const birthRecords = [
+            { user: user._id, motherId: females[0]._id, fatherId: males[0]._id, birthDate: new Date('2025-09-15'), lambCount: 2, lambDetails: 'נקבה 3.2 ק"ג, זכר 3.5 ק"ג', complications: '', notes: 'לידה תקינה' },
+            { user: user._id, motherId: females[1]._id, fatherId: males[0]._id, birthDate: new Date('2025-10-02'), lambCount: 1, lambDetails: 'זכר 4.1 ק"ג', complications: '', notes: '' },
+            { user: user._id, motherId: females[2]._id, fatherId: males[1] ? males[1]._id : males[0]._id, birthDate: new Date('2025-10-20'), lambCount: 3, lambDetails: '2 נקבות, 1 זכר', complications: 'לידה ממושכת', notes: 'נדרשה עזרה וטרינרית' },
+            { user: user._id, motherId: females[3]._id, fatherId: males[0]._id, birthDate: new Date('2025-11-05'), lambCount: 2, lambDetails: '2 זכרים, 3.0 ק"ג כ"א', complications: '', notes: '' },
+            { user: user._id, motherId: females[4]._id, fatherId: males[1] ? males[1]._id : males[0]._id, birthDate: new Date('2025-12-10'), lambCount: 1, lambDetails: 'נקבה 3.8 ק"ג', complications: 'שליה שנשארה', notes: 'טופל בהצלחה' },
+            { user: user._id, motherId: females[5] ? females[5]._id : females[0]._id, fatherId: males[0]._id, birthDate: new Date('2026-01-14'), lambCount: 2, lambDetails: 'זכר ונקבה', complications: '', notes: 'לידה קלה' },
+            { user: user._id, motherId: females[6] ? females[6]._id : females[1]._id, fatherId: males[1] ? males[1]._id : males[0]._id, birthDate: new Date('2026-01-28'), lambCount: 1, lambDetails: 'זכר 4.5 ק"ג', complications: '', notes: '' },
+            { user: user._id, motherId: females[7] ? females[7]._id : females[2]._id, fatherId: males[0]._id, birthDate: new Date('2026-02-10'), lambCount: 2, lambDetails: '2 נקבות', complications: '', notes: 'אם ותינוקות במצב מעולה' }
+        ];
+        await Birth.create(birthRecords);
+        console.log(`Created ${birthRecords.length} birth records`);
+
+        // Create medical treatments
+        const treatments = [
+            { user: user._id, sheepId: sheep[0]._id, diagnosis: 'בדיקה שגרתית', treatment: 'בדיקה כללית ושקילה', date: new Date('2025-11-10'), medications: '', veterinarian: 'ד"ר כהן', cost: 150, status: 'completed', notes: 'מצב תקין' },
+            { user: user._id, sheepId: sheep[3]._id, diagnosis: 'זיהום בפרסה', treatment: 'ניקוי וחיטוי הפרסה', date: new Date('2025-12-05'), medications: 'תרסיס אנטיביוטי 10ml', veterinarian: 'ד"ר לוי', cost: 200, status: 'completed', notes: 'זיהום קל בפרסה הקדמית' },
+            { user: user._id, sheepId: sheep[5]._id, diagnosis: 'דלקת עיניים', treatment: 'טיפול מקומי בטיפות', date: new Date('2026-01-12'), medications: 'טיפות עיניים - 2 טיפות x3 ליום', veterinarian: 'ד"ר כהן', cost: 120, status: 'completed', notes: 'שבוע טיפול' },
+            { user: user._id, sheepId: sheep[9]._id, diagnosis: 'שלשול', treatment: 'מתן נוזלים ואלקטרוליטים', date: new Date('2026-01-25'), medications: 'אלקטרוליטים 500ml', veterinarian: 'ד"ר לוי', cost: 180, status: 'follow_up_needed', followUpDate: new Date('2026-02-01'), notes: 'מעקב 3 ימים' },
+            { user: user._id, sheepId: sheep[14]._id, diagnosis: 'גזיזה עונתית', treatment: 'גזיזת צמר', date: new Date('2026-02-15'), medications: '', veterinarian: '', cost: 50, status: 'completed', notes: 'גזיזת צמר עונתית' }
+        ];
+        await MedicalTreatment.create(treatments);
+        console.log(`Created ${treatments.length} medical treatments`);
+
         // Create vaccinations
         const vaccinations = [];
-        for (let i = 0; i < 10; i++) {
+        const vaccineTypes = ['קלוסטרידיום', 'ברוצלוזיס', 'פסטרלוזיס', 'אנתרקס', 'כלבת', 'PPR', 'אבעבועות'];
+        for (let i = 0; i < 12; i++) {
             vaccinations.push({
                 user: user._id,
                 sheepId: sheep[i % sheep.length]._id,
-                vaccineName: ['קלוסטרידיום', 'ברוצלוזיס', 'פסטרלוזיס', 'אנתרקס'][i % 4],
+                vaccineName: vaccineTypes[i % vaccineTypes.length],
+                vaccinationType: vaccineTypes[i % vaccineTypes.length],
                 date: new Date(2025, 10 + (i % 3), Math.floor(Math.random() * 28) + 1),
                 nextDueDate: new Date(2026, 2 + (i % 4), Math.floor(Math.random() * 28) + 1),
-                veterinarian: 'ד"ר כהן'
+                veterinarian: ['ד"ר כהן', 'ד"ר לוי', 'ד"ר אברהם'][i % 3],
+                administeredBy: ['ד"ר כהן', 'ד"ר לוי', 'ד"ר אברהם'][i % 3]
             });
         }
         await Vaccination.create(vaccinations);

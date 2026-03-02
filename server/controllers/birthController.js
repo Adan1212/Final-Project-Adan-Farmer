@@ -11,7 +11,7 @@ exports.getBirths = async (req, res) => {
             .populate('motherId', 'tagNumber name')
             .populate('fatherId', 'tagNumber name')
             .populate('lambIds', 'tagNumber name')
-            .sort('-date');
+            .sort('-birthDate');
         res.status(200).json({ success: true, count: births.length, data: births });
     } catch (err) {
         res.status(500).json({ success: false, message: 'Server error', error: err.message });

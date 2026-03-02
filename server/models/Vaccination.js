@@ -13,7 +13,12 @@ const vaccinationSchema = new mongoose.Schema({
     },
     vaccineName: {
         type: String,
-        required: [true, 'Please add vaccine name'],
+        trim: true,
+        default: ''
+    },
+    vaccinationType: {
+        type: String,
+        required: [true, 'Please add vaccination type'],
         trim: true
     },
     date: {
@@ -25,6 +30,10 @@ const vaccinationSchema = new mongoose.Schema({
         type: Date
     },
     veterinarian: {
+        type: String,
+        default: ''
+    },
+    administeredBy: {
         type: String,
         default: ''
     },

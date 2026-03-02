@@ -2,7 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const morgan = require('morgan');
 const path = require('path');
-require('dotenv').config();
+require('dotenv').config({ path: path.join(__dirname, '.env') });
 
 const connectDB = require('./config/db');
 const { isMemoryServer } = require('./config/db');
@@ -76,13 +76,16 @@ async function seedDemoData() {
     const sheep = await Sheep.create(sheepData);
 
     const vaccinations = [];
-    for (let i = 0; i < 10; i++) {
+    const vaccineTypes = ['קלוסטרידיום', 'ברוצלוזיס', 'פסטרלוזיס', 'אנתרקס', 'כלבת', 'PPR', 'אבעבועות'];
+    for (let i = 0; i < 12; i++) {
         vaccinations.push({
             user: user._id, sheepId: sheep[i % sheep.length]._id,
-            vaccineName: ['קלוסטרידיום', 'ברוצלוזיס', 'פסטרלוזיס', 'אנתרקס'][i % 4],
+            vaccineName: vaccineTypes[i % vaccineTypes.length],
+            vaccinationType: vaccineTypes[i % vaccineTypes.length],
             date: new Date(2025, 10 + (i % 3), Math.floor(Math.random() * 28) + 1),
             nextDueDate: new Date(2026, 2 + (i % 4), Math.floor(Math.random() * 28) + 1),
-            veterinarian: 'ד"ר כהן'
+            veterinarian: ['ד"ר כהן', 'ד"ר לוי', 'ד"ר אברהם'][i % 3],
+            administeredBy: ['ד"ר כהן', 'ד"ר לוי', 'ד"ר אברהם'][i % 3]
         });
     }
     await Vaccination.create(vaccinations);
@@ -156,12 +159,12 @@ async function seedDemoData() {
     const mothers = sheep.filter(s => s.gender === 'female').slice(0, 6);
     const fathers = sheep.filter(s => s.gender === 'male').slice(0, 2);
     await Birth.create([
-        { user: user._id, motherId: mothers[0]._id, fatherId: fathers[0]?._id, date: new Date('2026-02-10'), numberOfLambs: 2, birthType: 'natural', notes: 'לידה תקינה' },
-        { user: user._id, motherId: mothers[1]._id, fatherId: fathers[0]?._id, date: new Date('2026-02-05'), numberOfLambs: 1, birthType: 'natural', notes: '' },
-        { user: user._id, motherId: mothers[2]._id, fatherId: fathers[1]?._id, date: new Date('2026-01-28'), numberOfLambs: 3, birthType: 'assisted', complications: 'לידה ממושכת', notes: 'נדרש סיוע וטרינרי' },
-        { user: user._id, motherId: mothers[3]._id, fatherId: fathers[1]?._id, date: new Date('2026-01-20'), numberOfLambs: 2, birthType: 'natural', notes: '' },
-        { user: user._id, motherId: mothers[4]._id, date: new Date('2026-01-12'), numberOfLambs: 1, birthType: 'cesarean', complications: 'ניתוח קיסרי', notes: 'האם והטלה בריאים' },
-        { user: user._id, motherId: mothers[5]._id, fatherId: fathers[0]?._id, date: new Date('2025-12-25'), numberOfLambs: 2, birthType: 'natural', notes: '' }
+        { user: user._id, motherId: mothers[0]._id, fatherId: fathers[0]?._id, birthDate: new Date('2026-02-10'), lambCount: 2, lambDetails: 'נקבה 3.2 ק"ג, זכר 3.5 ק"ג', birthType: 'natural', notes: 'לידה תקינה' },
+        { user: user._id, motherId: mothers[1]._id, fatherId: fathers[0]?._id, birthDate: new Date('2026-02-05'), lambCount: 1, lambDetails: 'זכר 4.1 ק"ג', birthType: 'natural', notes: '' },
+        { user: user._id, motherId: mothers[2]._id, fatherId: fathers[1]?._id, birthDate: new Date('2026-01-28'), lambCount: 3, lambDetails: '2 נקבות, 1 זכר', birthType: 'assisted', complications: 'לידה ממושכת', notes: 'נדרש סיוע וטרינרי' },
+        { user: user._id, motherId: mothers[3]._id, fatherId: fathers[1]?._id, birthDate: new Date('2026-01-20'), lambCount: 2, lambDetails: '2 זכרים', birthType: 'natural', notes: '' },
+        { user: user._id, motherId: mothers[4]._id, birthDate: new Date('2026-01-12'), lambCount: 1, lambDetails: 'נקבה 3.8 ק"ג', birthType: 'cesarean', complications: 'ניתוח קיסרי', notes: 'האם והטלה בריאים' },
+        { user: user._id, motherId: mothers[5]._id, fatherId: fathers[0]?._id, birthDate: new Date('2025-12-25'), lambCount: 2, lambDetails: 'זכר ונקבה', birthType: 'natural', notes: '' }
     ]);
 
     // --- Medical Treatments ---

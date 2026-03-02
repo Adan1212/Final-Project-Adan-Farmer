@@ -15,15 +15,20 @@ const birthSchema = new mongoose.Schema({
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Sheep'
     },
-    date: {
+    birthDate: {
         type: Date,
         required: [true, 'Please add birth date'],
         default: Date.now
     },
-    numberOfLambs: {
+    lambCount: {
         type: Number,
         required: [true, 'Please add number of lambs'],
-        min: 1
+        min: 1,
+        default: 1
+    },
+    lambDetails: {
+        type: String,
+        default: ''
     },
     lambIds: [{
         type: mongoose.Schema.Types.ObjectId,

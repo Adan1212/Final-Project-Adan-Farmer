@@ -150,72 +150,37 @@ exports.createWeatherData = async (req, res) => {
     }
 };
 
-// @desc    Get realtime weather from OpenWeatherMap
+// @desc    Get realtime weather from Open-Meteo (free, no API key needed)
 // @route   GET /api/weather/realtime
 exports.getRealtimeWeather = async (req, res) => {
     try {
-        const apiKey = process.env.OPENWEATHER_API_KEY;
-        // Default coordinates: Be'er Sheva, Israel (Negev - farming region)
-        const lat = req.query.lat || 31.25;
-        const lon = req.query.lon || 34.79;
+        // Default coordinates: Nazareth, Israel
+        const lat = req.query.lat || 32.70;
+        const lon = req.query.lon || 35.30;
 
-        if (!apiKey || apiKey === 'your_openweather_api_key_here') {
-            // Fallback: return latest weather from DB if no API key
-            const latest = await WeatherData.findOne().sort('-date');
-            if (latest) {
-                return res.status(200).json({
-                    success: true,
-                    source: 'database',
-                    data: {
-                        temperature: latest.temperature,
-                        temperatureMin: latest.temperatureMin,
-                        temperatureMax: latest.temperatureMax,
-                        humidity: latest.humidity,
-                        windSpeed: latest.windSpeed,
-                        rainfall: latest.rainfall || 0,
-                        description: 'From database (set OPENWEATHER_API_KEY for live data)',
-                        icon: '01d',
-                        city: 'Local',
-                        date: latest.date
-                    }
-                });
-            }
-            return res.status(200).json({
-                success: true,
-                source: 'default',
-                data: {
-                    temperature: 22,
-                    temperatureMin: 15,
-                    temperatureMax: 28,
-                    humidity: 50,
-                    windSpeed: 3,
-                    rainfall: 0,
-                    description: 'No API key configured',
-                    icon: '01d',
-                    city: 'Default',
-                    date: new Date()
-                }
-            });
-        }
-
-        const url = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${apiKey}&units=metric`;
+        // Open-Meteo API — free, no API key required, real live weather
+        const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,relative_humidity_2m,wind_speed_10m,surface_pressure,rain,cloud_cover,weather_code,apparent_temperature&daily=temperature_2m_max,temperature_2m_min&timezone=auto&forecast_days=1`;
         const response = await axios.get(url);
-        const d = response.data;
+        const current = response.data.current;
+        const daily = response.data.daily;
+
+        // Map weather code to description and icon
+        const weatherInfo = getWeatherDescription(current.weather_code);
 
         const weatherData = {
-            temperature: d.main.temp,
-            temperatureMin: d.main.temp_min,
-            temperatureMax: d.main.temp_max,
-            humidity: d.main.humidity,
-            windSpeed: d.wind?.speed || 0,
-            pressure: d.main.pressure,
-            rainfall: d.rain?.['1h'] || d.rain?.['3h'] || 0,
-            cloudCover: d.clouds?.all || 0,
-            description: d.weather?.[0]?.description || '',
-            icon: d.weather?.[0]?.icon || '01d',
-            city: d.name,
-            country: d.sys?.country,
-            feelsLike: d.main.feels_like,
+            temperature: current.temperature_2m,
+            temperatureMin: daily.temperature_2m_min[0],
+            temperatureMax: daily.temperature_2m_max[0],
+            humidity: current.relative_humidity_2m,
+            windSpeed: current.wind_speed_10m / 3.6, // km/h to m/s
+            pressure: current.surface_pressure,
+            rainfall: current.rain || 0,
+            cloudCover: current.cloud_cover || 0,
+            description: weatherInfo.description,
+            icon: weatherInfo.icon,
+            city: getCityName(parseFloat(lat), parseFloat(lon)),
+            country: 'IL',
+            feelsLike: current.apparent_temperature,
             date: new Date()
         };
 
@@ -227,14 +192,14 @@ exports.getRealtimeWeather = async (req, res) => {
             temperatureMin: weatherData.temperatureMin,
             temperatureMax: weatherData.temperatureMax,
             humidity: weatherData.humidity,
-            windSpeed: weatherData.windSpeed,
+            windSpeed: parseFloat(weatherData.windSpeed.toFixed(2)),
             rainfall: weatherData.rainfall,
             pressure: weatherData.pressure,
             cloudCover: weatherData.cloudCover,
             source: 'api'
         });
 
-        res.status(200).json({ success: true, source: 'openweathermap', data: weatherData });
+        res.status(200).json({ success: true, source: 'open-meteo', data: weatherData });
     } catch (err) {
         // If API fails, fallback to DB
         try {
@@ -261,6 +226,58 @@ exports.getRealtimeWeather = async (req, res) => {
         res.status(500).json({ success: false, message: 'Weather fetch failed', error: err.message });
     }
 };
+
+// Map Open-Meteo WMO weather codes to descriptions and icons
+function getWeatherDescription(code) {
+    const weatherMap = {
+        0: { description: 'Clear sky', icon: '01d' },
+        1: { description: 'Mainly clear', icon: '02d' },
+        2: { description: 'Partly cloudy', icon: '03d' },
+        3: { description: 'Overcast', icon: '04d' },
+        45: { description: 'Foggy', icon: '50d' },
+        48: { description: 'Depositing rime fog', icon: '50d' },
+        51: { description: 'Light drizzle', icon: '09d' },
+        53: { description: 'Moderate drizzle', icon: '09d' },
+        55: { description: 'Dense drizzle', icon: '09d' },
+        61: { description: 'Slight rain', icon: '10d' },
+        63: { description: 'Moderate rain', icon: '10d' },
+        65: { description: 'Heavy rain', icon: '10d' },
+        71: { description: 'Slight snow', icon: '13d' },
+        73: { description: 'Moderate snow', icon: '13d' },
+        75: { description: 'Heavy snow', icon: '13d' },
+        80: { description: 'Slight rain showers', icon: '09d' },
+        81: { description: 'Moderate rain showers', icon: '09d' },
+        82: { description: 'Violent rain showers', icon: '09d' },
+        95: { description: 'Thunderstorm', icon: '11d' },
+        96: { description: 'Thunderstorm with hail', icon: '11d' },
+        99: { description: 'Thunderstorm with heavy hail', icon: '11d' },
+    };
+    return weatherMap[code] || { description: 'Unknown', icon: '01d' };
+}
+
+// Get city name based on coordinates
+function getCityName(lat, lon) {
+    const cities = [
+        { name: 'Nazareth', lat: 32.70, lon: 35.30 },
+        { name: "Be'er Sheva", lat: 31.25, lon: 34.79 },
+        { name: 'Tel Aviv', lat: 32.08, lon: 34.78 },
+        { name: 'Haifa', lat: 32.79, lon: 34.99 },
+        { name: 'Jerusalem', lat: 31.77, lon: 35.23 },
+        { name: 'Eilat', lat: 29.56, lon: 34.95 },
+        { name: 'Tiberias', lat: 32.79, lon: 35.53 },
+    ];
+    // Find closest city
+    let closest = cities[0];
+    let minDist = Infinity;
+    for (const city of cities) {
+        const dist = Math.sqrt(Math.pow(city.lat - lat, 2) + Math.pow(city.lon - lon, 2));
+        if (dist < minDist) {
+            minDist = dist;
+            closest = city;
+        }
+    }
+    return minDist < 0.3 ? closest.name : `${lat.toFixed(2)}, ${lon.toFixed(2)}`;
+}
 
 // ==================== PREDICTIONS ====================
 
@@ -529,6 +546,74 @@ exports.getCostSavings = async (req, res) => {
                 avgSavingsPercent: recommendations.length
                     ? parseFloat((recommendations.reduce((sum, r) => sum + r.savings, 0) / recommendations.length).toFixed(1))
                     : 0
+            }
+        });
+    } catch (err) {
+        res.status(500).json({ success: false, message: 'Server error', error: err.message });
+    }
+};
+
+// @desc    Get smart suggestion for water reading based on weather + field + crop
+// @route   GET /api/water/smart-suggest/:fieldId
+exports.getSmartSuggestion = async (req, res) => {
+    try {
+        const { fieldId } = req.params;
+        const field = await Field.findById(fieldId);
+        if (!field) return res.status(404).json({ success: false, message: 'Field not found' });
+
+        const crop = await Crop.findOne({ fieldId, status: 'growing' });
+
+        // Get latest weather from DB or Open-Meteo
+        let weather = await WeatherData.findOne().sort('-date');
+        if (!weather) {
+            try {
+                const url = `https://api.open-meteo.com/v1/forecast?latitude=32.70&longitude=35.30&current=temperature_2m,relative_humidity_2m,wind_speed_10m,surface_pressure,rain&timezone=auto`;
+                const resp = await axios.get(url);
+                const c = resp.data.current;
+                weather = { temperature: c.temperature_2m, humidity: c.relative_humidity_2m, windSpeed: c.wind_speed_10m / 3.6, pressure: c.surface_pressure, rainfall: c.rain || 0 };
+            } catch { weather = { temperature: 25, humidity: 50, windSpeed: 2, pressure: 1013, rainfall: 0 }; }
+        }
+
+        // Calculate ET0 and suggestion
+        const et0 = calculateET0(weather);
+        const kc = getCropCoefficient(crop?.growthStage || 'vegetative', crop?.cropType || 'general');
+        const suggestedConsumption = parseFloat((et0 * kc * field.size).toFixed(2));
+
+        // Get historical average for this field
+        const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000);
+        const recentReadings = await WaterReading.find({ fieldId, date: { $gte: thirtyDaysAgo } });
+        const historicalAvg = recentReadings.length > 0
+            ? parseFloat((recentReadings.reduce((s, r) => s + r.actualConsumption, 0) / recentReadings.length).toFixed(2))
+            : null;
+
+        // Latest prediction
+        const latestPrediction = await WaterPrediction.findOne({ fieldId, algorithm: 'ensemble' }).sort('-date');
+
+        // Smart tip
+        let tip = '';
+        if (weather.rainfall > 5) tip = 'גשם חזק - שקול להפחית השקיה';
+        else if (weather.temperature > 35) tip = 'חום כבד - צריכת מים מוגברת צפויה';
+        else if (weather.temperature < 10) tip = 'קר - צריכת מים מופחתת צפויה';
+        else if (weather.humidity > 80) tip = 'לחות גבוהה - פחות השקיה נדרשת';
+        else tip = 'תנאים רגילים';
+
+        res.status(200).json({
+            success: true,
+            data: {
+                suggestedConsumption,
+                historicalAvg,
+                predictedConsumption: latestPrediction?.predictedConsumption || null,
+                et0,
+                kc,
+                weather: {
+                    temperature: weather.temperature,
+                    humidity: weather.humidity,
+                    rainfall: weather.rainfall || 0,
+                    windSpeed: weather.windSpeed
+                },
+                field: { name: field.name, size: field.size, soilType: field.soilType },
+                crop: crop ? { type: crop.cropType, stage: crop.growthStage } : null,
+                tip
             }
         });
     } catch (err) {

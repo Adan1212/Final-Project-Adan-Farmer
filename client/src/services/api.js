@@ -111,6 +111,7 @@ export const waterAPI = {
     deleteReading: (id) => api.delete(`/water/${id}`),
     getSummary: () => api.get('/water/summary'),
     getSavings: () => api.get('/water/savings'),
+    getSmartSuggestion: (fieldId) => api.get(`/water/smart-suggest/${fieldId}`),
 };
 
 // Weather

@@ -9,6 +9,7 @@ router.use(protect);
 router.route('/').get(water.getWaterReadings).post(water.createWaterReading);
 router.get('/summary', water.getWaterSummary);
 router.get('/savings', water.getCostSavings);
+router.get('/smart-suggest/:fieldId', water.getSmartSuggestion);
 router.route('/:id').put(water.updateWaterReading).delete(water.deleteWaterReading);
 
 module.exports = router;

@@ -32,7 +32,7 @@ const Dashboard = () => {
         try {
             const [dashRes, weatherRes] = await Promise.all([
                 dashboardAPI.getStats(),
-                weatherAPI.getRealtime().catch(() => null)
+                weatherAPI.getRealtime({ params: { lat: 32.70, lon: 35.30 } }).catch(() => null)
             ]);
             setStats(dashRes.data.data);
             if (weatherRes?.data?.data) {
